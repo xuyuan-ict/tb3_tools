@@ -318,4 +318,3 @@ def teleopmain(argv=None):
         sys.exit(1)
     except KeyboardInterrupt:
         sys.exit(1)
-        # pass

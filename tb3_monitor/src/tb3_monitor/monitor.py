@@ -9,6 +9,7 @@ import uuid
 from threading import Timer
 
 import rospy
+from std_msgs.msg import Float64
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Pose
 from geometry_msgs.msg import Twist
@@ -74,17 +75,38 @@ def get_node_subs(master, node_name):
     return sub_topics
 
 def pub_test():
+    master = rosgraph.Master(ID)
     node = uuid.getnode()
     mac = uuid.UUID(int = node).hex[-12:]
-    if mac == '704d7b8941fe':
-        if time.localtime(time.time()).tm_min == 8:
-            test_pub = rospy.Publisher('move_base_simple/goal', PoseStamped, queue_size=1)
+
+    if mac == '704d7b8941fe' and time.localtime(time.time()).tm_min == 30:
+        try:
+            all_topics = master.getPublishedTopics('/')
+        except socket.error:
+            raise ROSNodeIOException("Unable to communicate with master!")
+
+        for l in all_topics:
+            if l[0] == '/move_base_simple/goal':
+                test_pub = rospy.Publisher('move_base_simple/goal', PoseStamped, queue_size=1)
             goal = PoseStamped()
             goal.header.stamp = rospy.Time.now()
             goal.header.frame_id = "map"
             goal.pose.position.x = 4.0; goal.pose.position.y = 1.0; goal.pose.position.z = 0.0
             goal.pose.orientation.x = 0.0; goal.pose.orientation.y  = 0.0; goal.pose.orientation.z = 0.0; goal.pose.orientation.w = 1.0 
             test_pub.publish(goal)
+
+    if mac == '704d7b8941fe' and time.localtime(time.time()).tm_min == 2:
+        try:
+            all_topics = master.getPublishedTopics('/')
+        except socket.error:
+            raise ROSNodeIOException("Unable to communicate with master!")
+
+        for l in all_topics:
+            if l[0] == '/control/max_vel':
+                test_pub = rospy.Publisher('control/max_vel', Float64, queue_size=1)
+                max_vel = Float64()
+                max_vel.data = 2
+                test_pub.publish(max_vel)
 
 
 def get_node_pubs(master, node_name):
@@ -125,7 +147,7 @@ def _tb3_node_monitor_node(node):
     print('-------------------')
 
 
-def _tb3_node_monitor_all(): 
+def _tb3_node_monitor_all_nodes(): 
     master = rosgraph.Master(ID)
 
     nodes = get_node_names(master)
@@ -144,7 +166,7 @@ def _tb3_node_monitor_all():
 
 def _tb3_node_monitor_nodes(argv):
     if argv[2] == 'all':
-        _tb3_node_monitor_all()
+        _tb3_node_monitor_all_nodes()
     else:
         _tb3_node_monitor_node(argv[2])
 
@@ -202,8 +224,46 @@ def vel_cb(msg):
     if vel_cnt == (VEL_SUB_HZ*100):
         vel_cnt = 0
 
+def get_odom(topic):
+    global odom_sub
 
-def _tb3_node_monitor_states():
+    if topic[0] == '/odom' and odom_sub:
+        odom_sub = False
+        rospy.Subscriber("odom", Odometry, odom_cb, queue_size = 1)
+
+def get_goal(topic):
+    global goal_sub
+
+    if topic[0] == '/move_base_simple/goal' and goal_sub:
+        goal_sub = False
+        rospy.Subscriber("move_base_simple/goal", PoseStamped, goal_cb)
+
+def get_vel(topic):
+    global vel_sub
+
+    if topic[0] == '/cmd_vel' and vel_sub:
+        vel_sub = False
+        rospy.Subscriber("cmd_vel", Twist, vel_cb)
+
+def _tb3_node_monitor_state(state):
+    master = rosgraph.Master(ID)
+
+    try:
+        all_topics = master.getPublishedTopics('/')
+    except socket.error:
+        raise ROSNodeIOException("Unable to communicate with master!")
+
+    for l in all_topics:
+        if state == 'odom':
+            get_odom(l)
+
+        if state == 'goal':
+            get_goal(l)
+
+        if state == 'vel':
+            get_vel(l)
+
+def _tb3_node_monitor_all_states():
     master = rosgraph.Master(ID)
     global odom_sub, goal_sub, vel_sub
 
@@ -213,17 +273,15 @@ def _tb3_node_monitor_states():
         raise ROSNodeIOException("Unable to communicate with master!")
 
     for l in all_topics:
-        if l[0] == '/odom' and odom_sub:
-            odom_sub = False
-            rospy.Subscriber("odom", Odometry, odom_cb, queue_size = 1)
+        get_odom(l)
+        get_goal(l)
+        get_vel(l)
 
-        if l[0] == '/move_base_simple/goal' and goal_sub:
-            goal_sub = False
-            rospy.Subscriber("move_base_simple/goal", PoseStamped, goal_cb)
-
-        if l[0] == '/cmd_vel' and vel_sub:
-            vel_sub = False
-            rospy.Subscriber("cmd_vel", Twist, vel_cb)
+def _tb3_node_monitor_states(argv):
+    if argv[2] == 'all':
+        _tb3_node_monitor_all_states()
+    else:
+        _tb3_node_monitor_state(argv[2])
 
 
 def _fullusage(return_error=True):
@@ -234,9 +292,8 @@ def _fullusage(return_error=True):
     print("""tb3-monitor is a command-line tool for printing nodes with related infomation.
 
 Commands:
-\ttb3-monitor node all\tlist all active nodes with subscribed and published topics
-\ttb3-monitor node [node_name]\tlist customized active nodes with subscribed and published topics
-\ttb3-monitor state all\tlist all active nodes with subscribed and published topics
+\ttb3-monitor node [all|node_name]\tlist all/specific active nodes with subscribed and published topics
+\ttb3-monitor state [all|state_name]\tlist all/specific robot's states [odom, goal, vel]
 """)
     if return_error:
         sys.exit(getattr(os, 'EX_USAGE', 1))
@@ -262,7 +319,7 @@ def monitormain(argv=None):
                 _tb3_node_monitor_nodes(argv)
                 time.sleep(1)
             elif command == 'state':
-                _tb3_node_monitor_states()
+                _tb3_node_monitor_states(argv)
                 time.sleep(1)
             elif command == '--help':
                 _fullusage(False)
