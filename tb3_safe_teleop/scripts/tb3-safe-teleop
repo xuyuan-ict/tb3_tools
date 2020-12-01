@@ -1,0 +1,7 @@
+#! /usr/bin/env python
+
+import tb3_safe_teleop.teleop_key
+
+
+if __name__ == '__main__':
+    tb3_safe_teleop.teleop_key.teleopmain()

@@ -1,0 +1,11 @@
+<launch>
+  <arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
+  <arg name="stop_distance" default="0.2"/>
+
+  <param name="model" value="$(arg model)"/>
+  <param name="stop_distance" value="$(arg stop_distance)"/>
+
+  <!-- tb3_teleop_key already has its own built in velocity smoother -->
+  <node pkg="tb3_teleop" type="tb3_teleop_key" name="tb3_teleop_keyboard" output="screen">
+  </node>
+</launch>
