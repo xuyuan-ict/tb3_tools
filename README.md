@@ -25,7 +25,6 @@ source devel/setup.bash
     ```shell
     tb3-safe-teleop key [tb3_model] [safe_distance]
     ```
-
 Parameter Descriptions
 * _key_ : in current version, we only implement safe teleoperation with keyboard device. Other input devices (e.g. ps3 joystick and xbox360 joystick) will be implemented in the near future.
 * _tb3\_model_ : the turtlebo3 model type [burger, waffle, waffle_pi]
@@ -35,8 +34,8 @@ Parameter Descriptions
 2. _**tb3\_monitor**_
 
     ```shell
-tb3-monitor node [all|node_name]
-tb3-monitor state [all|state_name]
+    tb3-monitor node [all|node_name]
+    tb3-monitor state [all|state_name]
     ```
 Parameter Descriptions
 * _node all_ : list all active nodes with subscribed and published topics per seconds
