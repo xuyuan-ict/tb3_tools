@@ -11,7 +11,7 @@ project(tb3_safe_teleop)
 # Find catkin packages and libraries for catkin and system dependencies
 ################################################################################
 find_package(catkin REQUIRED COMPONENTS 
-	rospy std_msgs sensor_msgs geometry_msgs message_generation)
+	rospy std_msgs sensor_msgs geometry_msgs)
 
 ################################################################################
 # Setup for python modules and scripts
